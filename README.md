@@ -100,16 +100,56 @@ Colab/Kaggle notebook with an internet connection and (ideally) a GPU for
 real training. On CPU, expect training to be slow for a full-size dataset —
 Colab's free T4 GPU is more than enough for this project size.
 
-## Getting to the resume numbers
+## Results
 
-The 98.1% accuracy / 97.8% precision / 97.5% recall / 97.6% F1 in the
-resume bullet describes a specific run on a specific dataset. To reproduce
-similar numbers:
-1. Pick a clean, moderately-sized public dataset (e.g. Intel Image
-   Classification, a Kaggle flowers/animals set, or a curated subset of
-   CIFAR-10/100 exported to folders) — something with enough images per
-   class (100+) that overfitting isn't the only thing driving high accuracy.
-2. Run `train.py` for 20–30 epochs with the default config.
-3. Run `evaluate.py` and record the four metrics plus the confusion matrix.
-4. Run `ablation.py` and use its comparison chart as your "ablation and
-   error analysis" evidence in your writeup/report.
+Trained on the [Intel Image Classification dataset](https://www.kaggle.com/datasets/puneet6060/intel-image-classification)
+(6 classes: buildings, forest, glacier, mountain, sea, street; ~17k images,
+stratified 70/15/15 train/val/test split).
+
+**Test set performance (Adam + cosine LR decay):**
+
+| Metric | Score |
+|---|---|
+| Accuracy | 93.27% |
+| Precision (macro-avg) | 93.57% |
+| Recall (macro-avg) | 93.38% |
+| F1-score (macro-avg) | 93.36% |
+
+**Per-class F1-score:**
+
+| Class | F1 |
+|---|---|
+| Forest | 0.9916 |
+| Sea | 0.9688 |
+| Street | 0.9402 |
+| Buildings | 0.9311 |
+| Mountain | 0.8951 |
+| Glacier | 0.8747 |
+
+### Ablation study
+
+Compared optimizer and LR schedule choices under identical training conditions:
+
+| Configuration | Accuracy | F1 |
+|---|---|---|
+| Adam + cosine decay | 93.27% | 93.36% |
+| Adam + step decay | 93.43% | 93.51% |
+| Adam + no schedule | 93.08% | 93.12% |
+| SGD + cosine decay | 84.12% | 84.31% |
+
+**Finding**: Adam substantially outperforms SGD (+9 points accuracy) under a
+short training budget, confirming Adam's faster convergence on a fine-tuning
+task. LR schedule choice (cosine vs. step vs. none) made comparatively little
+difference at this epoch count — the effect of schedule choice is expected to
+grow with longer training runs where the decay curve fully plays out.
+
+### Error analysis
+
+Glacier was the most consistently difficult class across every configuration
+(F1 ranging 0.75–0.89), most often confused with mountain — both classes
+share overlapping visual features (rocky, snow-covered terrain), which limits
+how well a purely appearance-based classifier can separate them without
+additional context (e.g. elevation or ice texture cues).
+
+![Confusion Matrix](outputs/confusion_matrix_adam_cosine.png)
+![Ablation Comparison](outputs/ablation_comparison.png)
